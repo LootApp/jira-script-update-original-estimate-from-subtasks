@@ -20,24 +20,31 @@ def results = searchProvider.search(query, user, PagerFilter.getUnlimitedFilter(
 log.debug("Total issues for processing: ${results.getTotal()}")
 
 results.getIssues().each {documentIssue ->
-
+	log.debug("---------------------------")
     def issue = issueManager.getIssueObject(documentIssue.id)
-    
     Collection subtasks = issue.getSubTaskObjects();
-    long estimate_seconds = 0
+    log.debug("TASK: ${issue.key} - subtasks: ${subtasks.size()} ( ${issue.originalEstimate})")
+    
+    long estimateSeconds = 0L
     subtasks.each{subtask->
-        estimate_seconds += subtask.originalEstimate
-        log.debug("subtask: ${subtask.key} = ${subtask.originalEstimate}")
+        log.debug(" - current estimate: ${estimateSeconds} + ${subtask.originalEstimate} ")
+        if(subtask.originalEstimate !=  null){
+            long subtaskOriginalEstimate = subtask.originalEstimate
+        	estimateSeconds += subtaskOriginalEstimate
+        }
+        log.debug(" - subtask: ${subtask.key} ( ${subtask.originalEstimate} )")
     }
-
+	log.debug("set to: ${estimateSeconds}")
     IssueInputParameters issueInputParameters = issueService.newIssueInputParameters()
-	issueInputParameters.setOriginalEstimate(estimate_seconds)
+	log.debug("${estimateSeconds}s")
+    long calc = estimateSeconds/new Long(60)
+    issueInputParameters.setOriginalEstimate(calc)
     
     def update = issueService.validateUpdate(user, issue.id, issueInputParameters)
         if (update.isValid()) {
             issueService.update(user, update)
         }
-    
-    log.debug("total_time: ${estimate_seconds}")
-	log.debug("subtasks: ${subtasks.size()}")
+    log.debug("===================")
+    log.debug("${issue.key} total_time: ${issue.originalEstimate}")
+	log.debug(" ")
 }
